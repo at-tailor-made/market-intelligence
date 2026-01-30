@@ -102,11 +102,12 @@ python scripts/market_intel.py analyze --route MEX-CUN
 ## Cron Jobs
 
 ```bash
-# Daily flight tracking at 14:00 UTC (~8am Mexico City)
+# Daily flight tracking at 14:00 UTC (~8am Mexico City/CST)
 0 14 * * * /path/to/market-intelligence/cron-daily-flights.sh
 
-# Weekly report on Mondays at 15:00 UTC
-0 15 * * 1 /path/to/market-intelligence/cron-weekly-report.sh
+# Weekly report on Fridays at 12:00 UTC (~6pm CST)
+# Runs Friday afternoon for weekend planning, content starts Monday
+0 12 * * 5 /path/to/market-intelligence/cron-weekly-report.sh
 ```
 
 ## Data Storage
