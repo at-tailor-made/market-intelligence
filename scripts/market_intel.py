@@ -14,9 +14,24 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+
+# Notion integration (optional)
+NOTION_ENABLED = False
+NOTION_CLIENT = None
+NOTION_DB_ID = None
+
+try:
+    from notion_client import Client
+    API_KEY = os.environ.get('NOTION_API_KEY')
+    if API_KEY:
+        NOTION_CLIENT = Client(auth=API_KEY)
+        NOTION_ENABLED = True
+except ImportError:
+    pass
 
 # Data storage paths
 DATA_DIR = Path(__file__).parent.parent / 'data' / 'market-intel'
@@ -44,6 +59,22 @@ ROUTES = {
 
 # Currency pairs to track
 CURRENCIES = ['USD', 'EUR', 'GBP']
+
+# Load Notion database ID
+def load_notion_db_id():
+    """Load Notion database ID from config file."""
+    config_file = DATA_DIR.parent / 'notion-db-ids.json'
+    if config_file.exists():
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+            return config.get('market_intel')
+    return None
+
+NOTION_DB_ID = load_notion_db_id()
+if NOTION_ENABLED and NOTION_DB_ID:
+    print("Notion integration enabled", file=sys.stderr)
+else:
+    NOTION_ENABLED = False
 
 
 def get_flight_prices(origin, destination, departure_date):
@@ -114,7 +145,115 @@ def store_price_data(route_id, prices, data_type='flights'):
     return existing_data[date_str][-1]
 
 
-def track_flights():
+def save_daily_prices_to_notion(results):
+    """Save daily flight prices to Notion."""
+    if not NOTION_ENABLED or not NOTION_DB_ID:
+        return
+
+    try:
+        date_str = datetime.now().strftime('%Y-%m-%d')
+
+        for result in results:
+            route_id = result['route']
+            data = result['data']
+
+            properties = {
+                'Name': {
+                    'title': [
+                        {'text': {'content': f"{date_str} - Daily Flights - {route_id}"}}
+                    ]
+                },
+                'Type': {'select': {'name': 'Daily Flights'}},
+                'Route': {'multi_select': [{'name': route_id}]},
+                'Avg Price': {'number': round(data['avg_price'], 2) if data['avg_price'] else None},
+                'Min Price': {'number': round(data['min_price'], 2) if data['min_price'] else None},
+                'Max Price': {'number': round(data['max_price'], 2) if data['max_price'] else None},
+                'Report Data': {'rich_text': [{'text': {'content': json.dumps(data, indent=2)}}]},
+            }
+
+            NOTION_CLIENT.pages.create(
+                parent={'database_id': NOTION_DB_ID},
+                properties=properties
+            )
+
+        print(f"Saved {len(results)} flight entries to Notion", file=sys.stderr)
+    except Exception as e:
+        print(f"Error saving to Notion: {e}", file=sys.stderr)
+
+
+def save_exchange_to_notion(results):
+    """Save exchange rates to Notion."""
+    if not NOTION_ENABLED or not NOTION_DB_ID:
+        return
+
+    try:
+        date_str = datetime.now().strftime('%Y-%m-%d')
+
+        for result in results:
+            pair = result['pair']
+            data = result['data']
+
+            properties = {
+                'Name': {
+                    'title': [
+                        {'text': {'content': f"{date_str} - Exchange Rates - {pair}"}}
+                    ]
+                },
+                'Type': {'select': {'name': 'Exchange Rate'}},
+                'Currency Pair': {'multi_select': [{'name': pair}]},
+                'Exchange Rate': {'number': round(data['rate'], 4)},
+                'Report Data': {'rich_text': [{'text': {'content': json.dumps(data, indent=2)}}]},
+            }
+
+            NOTION_CLIENT.pages.create(
+                parent={'database_id': NOTION_DB_ID},
+                properties=properties
+            )
+
+        print(f"Saved {len(results)} exchange entries to Notion", file=sys.stderr)
+    except Exception as e:
+        print(f"Error saving to Notion: {e}", file=sys.stderr)
+
+
+def save_weekly_report_to_notion(report):
+    """Save weekly report to Notion."""
+    if not NOTION_ENABLED or not NOTION_DB_ID:
+        return
+
+    try:
+        date_str = datetime.now().strftime('%Y-%m-%d')
+
+        # Build route list
+        routes = [{'name': r} for r in report['flights'].keys()]
+        currencies = [{'name': c} for c in report['exchange'].keys()]
+
+        # Build insights text
+        insights_text = '\n'.join(report['insights']) if report['insights'] else 'No significant insights'
+
+        properties = {
+            'Name': {
+                'title': [
+                    {'text': {'content': f"{date_str} - Weekly Report"}}
+                ]
+            },
+            'Type': {'select': {'name': 'Weekly Report'}},
+            'Route': {'multi_select': routes} if routes else None,
+            'Currency Pair': {'multi_select': currencies} if currencies else None,
+            'Insights': {'rich_text': [{'text': {'content': insights_text}}]},
+            'Report Data': {'rich_text': [{'text': {'content': json.dumps(report, indent=2)}}]},
+        }
+
+        NOTION_CLIENT.pages.create(
+            parent={'database_id': NOTION_DB_ID},
+            properties=properties
+        )
+
+        print("Saved weekly report to Notion", file=sys.stderr)
+    except Exception as e:
+        print(f"Error saving to Notion: {e}", file=sys.stderr)
+
+
+def track_flights(save_to_notion=False):
     """Track flight prices for all monitored routes."""
     print("Tracking flight prices...")
 
@@ -137,10 +276,13 @@ def track_flights():
         else:
             print(f"    No data available")
 
+    if save_to_notion:
+        save_daily_prices_to_notion(results)
+
     return results
 
 
-def track_exchange():
+def track_exchange(save_to_notion=False):
     """Track exchange rates (placeholder - needs real API)."""
     print("Tracking exchange rates...")
 
@@ -178,10 +320,13 @@ def track_exchange():
         })
         print(f"  {pair}: {rate}")
 
+    if save_to_notion:
+        save_exchange_to_notion(results)
+
     return results
 
 
-def generate_weekly_report(days=7):
+def generate_weekly_report(days=7, save_to_notion=False):
     """Generate weekly market intelligence report."""
     print("Generating weekly report...")
 
@@ -278,6 +423,9 @@ def generate_weekly_report(days=7):
                     f"(mejor para viajes a {currency})"
                 )
 
+    if save_to_notion:
+        save_weekly_report_to_notion(report)
+
     return report
 
 
@@ -326,6 +474,8 @@ def main():
     track_parser = subparsers.add_parser('track', help='Track data')
     track_parser.add_argument('--type', choices=['flights', 'exchange'], required=True,
                               help='Type of data to track')
+    track_parser.add_argument('--notion', action='store_true',
+                              help='Save to Notion database')
 
     # Report command
     report_parser = subparsers.add_parser('report', help='Generate weekly report')
@@ -333,6 +483,8 @@ def main():
                               help='Number of days to analyze (default: 7)')
     report_parser.add_argument('--format', choices=['json', 'telegram'], default='telegram',
                               help='Output format (default: telegram)')
+    report_parser.add_argument('--notion', action='store_true',
+                              help='Save to Notion database')
 
     # Analyze command
     analyze_parser = subparsers.add_parser('analyze', help='Analyze specific route')
@@ -343,14 +495,14 @@ def main():
 
     if args.command == 'track':
         if args.type == 'flights':
-            results = track_flights()
+            results = track_flights(save_to_notion=args.notion)
             print(json.dumps(results, indent=2))
         else:
-            results = track_exchange()
+            results = track_exchange(save_to_notion=args.notion)
             print(json.dumps(results, indent=2))
 
     elif args.command == 'report':
-        report = generate_weekly_report(days=args.days)
+        report = generate_weekly_report(days=args.days, save_to_notion=args.notion)
         if args.format == 'telegram':
             print(format_telegram_report(report))
         else:

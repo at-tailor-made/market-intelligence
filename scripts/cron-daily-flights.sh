@@ -4,4 +4,4 @@
 
 cd /home/clawdbot/market-intelligence
 source venv/bin/activate
-python scripts/market_intel.py track --type flights >> data/flight-tracking.log 2>&1
+python scripts/market_intel.py track --type flights --notion >> data/flight-tracking.log 2>&1

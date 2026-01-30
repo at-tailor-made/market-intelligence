@@ -4,4 +4,4 @@
 
 cd /home/clawdbot/market-intelligence
 source venv/bin/activate
-python scripts/market_intel.py report --days 7 --format telegram > /tmp/market-intel-weekly.txt
+python scripts/market_intel.py report --days 7 --format telegram --notion > /tmp/market-intel-weekly.txt
