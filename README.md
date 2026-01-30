@@ -4,7 +4,7 @@ Automated market tracking and reporting system for Tailor Made travel advisory.
 
 ## Features
 
-- **Daily Flight Price Tracking**: Monitors 6 key routes from Mexico City
+- **Daily Flight Price Tracking**: Monitors 6 key routes from Guadalajara (GDL)
 - **Exchange Rate Monitoring**: Tracks MXN vs USD, EUR, GBP
 - **Weekly Reports**: Automated market intelligence summaries
 - **Trend Analysis**: Price drops, opportunities, alerts
@@ -28,7 +28,7 @@ pip install -r requirements.txt
    - Add these properties:
      - **Name** (title)
      - **Type** (select): Daily Flights, Weekly Report, Exchange Rate
-     - **Route** (multi_select): MEX-CUN, MEX-MIA, MEX-JFK, MEX-LAX, MEX-MAD, MEX-CDG
+     - **Route** (multi_select): GDL-CUN, GDL-MIA, GDL-JFK, GDL-LAX, GDL-MAD, GDL-CDG
      - **Currency Pair** (multi_select): MXN-USD, MXN-EUR, MXN-GBP
      - **Avg Price** (number)
      - **Min Price** (number)
@@ -92,12 +92,12 @@ python scripts/market_intel.py analyze --route MEX-CUN
 
 ## Monitored Routes
 
-- MEX → CUN (Cancún) — Domestic leisure
-- MEX → MIA (Miami) — US East Coast
-- MEX → JFK (New York) — US East Coast
-- MEX → LAX (Los Angeles) — US West Coast
-- MEX → MAD (Madrid) — Europe
-- MEX → CDG (Paris) — Europe
+- GDL → CUN (Cancún) — Domestic leisure
+- GDL → MIA (Miami) — US East Coast
+- GDL → JFK (New York) — US East Coast
+- GDL → LAX (Los Angeles) — US West Coast
+- GDL → MAD (Madrid) — Europe
+- GDL → CDG (Paris) — Europe
 
 ## Cron Jobs
 

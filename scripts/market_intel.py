@@ -47,14 +47,14 @@ except ImportError:
     AMADEUS_AVAILABLE = False
     AmadeusClient = None
 
-# Key routes to monitor (Mexico-focused)
+# Key routes to monitor (Mexico-focused - starting from Guadalajara)
 ROUTES = {
-    'MEX-CUN': {'origin': 'MEX', 'destination': 'CUN', 'name': 'Ciudad de México → Cancún'},
-    'MEX-MIA': {'origin': 'MEX', 'destination': 'MIA', 'name': 'Ciudad de México → Miami'},
-    'MEX-JFK': {'origin': 'MEX', 'destination': 'JFK', 'name': 'Ciudad de México → Nueva York'},
-    'MEX-LAX': {'origin': 'MEX', 'destination': 'LAX', 'name': 'Ciudad de México → Los Angeles'},
-    'MEX-MAD': {'origin': 'MEX', 'destination': 'MAD', 'name': 'Ciudad de México → Madrid'},
-    'MEX-CDG': {'origin': 'MEX', 'destination': 'CDG', 'name': 'Ciudad de México → París'},
+    'GDL-CUN': {'origin': 'GDL', 'destination': 'CUN', 'name': 'Guadalajara → Cancún'},
+    'GDL-MIA': {'origin': 'GDL', 'destination': 'MIA', 'name': 'Guadalajara → Miami'},
+    'GDL-JFK': {'origin': 'GDL', 'destination': 'JFK', 'name': 'Guadalajara → Nueva York'},
+    'GDL-LAX': {'origin': 'GDL', 'destination': 'LAX', 'name': 'Guadalajara → Los Angeles'},
+    'GDL-MAD': {'origin': 'GDL', 'destination': 'MAD', 'name': 'Guadalajara → Madrid'},
+    'GDL-CDG': {'origin': 'GDL', 'destination': 'CDG', 'name': 'Guadalajara → París'},
 }
 
 # Currency pairs to track
@@ -83,12 +83,12 @@ def get_flight_prices(origin, destination, departure_date):
         print(f"Warning: Amadeus not available, using mock data for {origin}-{destination}", file=sys.stderr)
         # Return mock data for demo when Amadeus not available
         mock_prices = {
-            'MEX-CUN': [45.0, 48.0, 50.0, 52.0, 55.0],
-            'MEX-MIA': [116.0, 180.0, 200.0, 220.0, 250.0],
-            'MEX-JFK': [200.0, 220.0, 230.0, 240.0, 250.0],
-            'MEX-LAX': [120.0, 150.0, 180.0, 200.0, 220.0],
-            'MEX-MAD': [340.0, 350.0, 360.0, 370.0, 400.0],
-            'MEX-CDG': [390.0, 400.0, 410.0, 420.0, 500.0],
+            'GDL-CUN': [45.0, 48.0, 50.0, 52.0, 55.0],
+            'GDL-MIA': [116.0, 180.0, 200.0, 220.0, 250.0],
+            'GDL-JFK': [200.0, 220.0, 230.0, 240.0, 250.0],
+            'GDL-LAX': [120.0, 150.0, 180.0, 200.0, 220.0],
+            'GDL-MAD': [340.0, 350.0, 360.0, 370.0, 400.0],
+            'GDL-CDG': [390.0, 400.0, 410.0, 420.0, 500.0],
         }
         route_key = f'{origin}-{destination}'
         return mock_prices.get(route_key, [100.0, 120.0, 150.0, 180.0, 200.0])
