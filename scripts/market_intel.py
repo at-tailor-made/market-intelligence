@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import sys
+import requests
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -59,6 +60,10 @@ ROUTES = {
 
 # Currency pairs to track
 CURRENCIES = ['USD', 'EUR', 'GBP']
+
+# Exchange rate API
+EXCHANGERATE_API_KEY = os.environ.get('EXCHANGERATE_API_KEY')
+EXCHANGERATE_URL = os.environ.get('EXCHANGERATE_URL', 'https://v6.exchangerate-api.com/v6')
 
 # Load Notion database ID
 def load_notion_db_id():
@@ -283,16 +288,49 @@ def track_flights(save_to_notion=False):
 
 
 def track_exchange(save_to_notion=False):
-    """Track exchange rates (placeholder - needs real API)."""
+    """Track exchange rates using exchangerate-api.com."""
     print("Tracking exchange rates...")
 
-    # For MVP, using placeholder rates
-    # In production: use汇率API or fetch from financial data source
-    rates = {
-        'MXN-USD': 17.22,
-        'MXN-EUR': 18.75,
-        'MXN-GBP': 21.50,
-    }
+    # Fetch live rates from API
+    rates = {}
+
+    if EXCHANGERATE_API_KEY:
+        try:
+            # API format: /{API_KEY}/latest/{BASE}
+            # Response: {"conversion_rates": {"USD": rate, "EUR": rate, ...}}
+            # EXCHANGERATE_URL already includes the key, just append /latest/MXN
+            url = f"{EXCHANGERATE_URL}/latest/MXN"
+            print(f"Requesting: {url}", file=sys.stderr)
+
+            response = requests.get(url, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                if 'conversion_rates' in data:
+                    # API returns rate as "how many MXN per 1 foreign currency"
+                    # Need to invert to get "how many foreign currency per 1 MXN"
+                    for currency in CURRENCIES:
+                        if currency in data['conversion_rates']:
+                            raw_rate = data['conversion_rates'][currency]
+                            if raw_rate > 0:
+                                rates[f'MXN-{currency}'] = 1 / raw_rate
+                    print(f"Fetched {len(rates)} rates from API", file=sys.stderr)
+                else:
+                    print(f"Warning: No conversion_rates in API response", file=sys.stderr)
+            else:
+                print(f"Warning: API returned {response.status_code}", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: API request failed: {e}", file=sys.stderr)
+    else:
+        print("Warning: EXCHANGERATE_API_KEY not set, using fallback rates", file=sys.stderr)
+
+    # Fallback to mock if API fails or no key
+    if not rates:
+        rates = {
+            'MXN-USD': 17.22,
+            'MXN-EUR': 18.75,
+            'MXN-GBP': 21.50,
+        }
 
     results = []
     for pair, rate in rates.items():
